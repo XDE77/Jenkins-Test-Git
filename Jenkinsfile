@@ -1,84 +1,66 @@
 pipeline {
   agent any
+  environment {
+    AWS_REGION = 'us-east-1'
+  }
   stages {
-    stage('Test credentials') {
+    stage('Verify AWS credential binding') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'BunJank', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-          sh 'echo "Credential binding succeeded"'
+        withCredentials([[
+          $class: 'AmazonWebServicesCredentialsBinding',
+          credentialsId: 'BunJank',
+          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+        ]]) {
+          sh '''
+            set -euo pipefail
+            # Do not echo secrets. Verify identity only.
+            aws sts get-caller-identity --region ${AWS_REGION}
+          '''
+        }
+      }
+    }
+    stage('Checkout Code') {
+      steps {
+        checkout scm
+      }
+    }
+    stage('Terraform Init') {
+      steps {
+        sh 'terraform init'
+      }
+    }
+    stage('Terraform Plan') {
+      steps {
+        withCredentials([[
+          $class: 'AmazonWebServicesCredentialsBinding',
+          credentialsId: 'BunJank'
+        ]]) {
+          sh '''
+            set -euo pipefail
+            terraform plan -out=tfplan
+          '''
+        }
+      }
+    }
+    stage('Terraform Apply') {
+      steps {
+        input message: "Approve Terraform Apply?", ok: "Deploy"
+        withCredentials([[
+          $class: 'AmazonWebServicesCredentialsBinding',
+          credentialsId: 'BunJank'
+        ]]) {
+          sh '''
+            set -euo pipefail
+            terraform apply -auto-approve tfplan
+          '''
         }
       }
     }
   }
+  post {
+    success { echo 'Terraform deployment completed successfully!' }
+    failure { echo 'Terraform deployment failed!' }
+  }
 }
-
-
-pipeline {
-    agent any
-    environment {
-        AWS_REGION = 'us-east-1' 
-    }
-    stages {
-        stage('Set AWS Credentials') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'BunJank' 
-                ]]) {
-                    sh '''
-                    echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-                    aws sts get-caller-identity
-                    '''
-                }
-            }
-        }
-        stage('Checkout Code') {
-            steps {
-       		checkout scm
-    	    }
-        }
-        stage('Initialize Terraform') {
-            steps {
-                sh '''
-                terraform init
-                '''
-            }
-        }
-        stage('Plan Terraform') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'BunJank'
-                ]]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform plan -out=tfplan
-                    '''
-                }
-            }
-        }
-        stage('Apply Terraform') {
-            steps {
-                input message: "Approve Terraform Apply?", ok: "Deploy"
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'BunJank'
-                ]]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform apply -auto-approve tfplan
-                    '''
-                }
-            }
-        }
-    }
-    post {
-        success {
-            echo 'Terraform deployment completed successfully!'
-        }
-        failure {
-            echo 'Terraform deployment failed!'
-        }
-    }
 }
