@@ -14,22 +14,29 @@ pipeline {
         ]]) {
           sh '''
             set -euo pipefail
-            # Do not echo secrets. Verify identity only.
+            aws --version
             aws sts get-caller-identity --region ${AWS_REGION}
           '''
         }
       }
     }
+
     stage('Checkout Code') {
       steps {
         checkout scm
       }
     }
+
     stage('Terraform Init') {
       steps {
-        sh 'terraform init'
+        sh '''
+          set -euo pipefail
+          terraform --version
+          terraform init
+        '''
       }
     }
+
     stage('Terraform Plan') {
       steps {
         withCredentials([[
@@ -43,6 +50,7 @@ pipeline {
         }
       }
     }
+
     stage('Terraform Apply') {
       steps {
         input message: "Approve Terraform Apply?", ok: "Deploy"
@@ -58,9 +66,9 @@ pipeline {
       }
     }
   }
+
   post {
     success { echo 'Terraform deployment completed successfully!' }
     failure { echo 'Terraform deployment failed!' }
   }
-}
 }
