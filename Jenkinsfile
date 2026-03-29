@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('Test credentials') {
       steps {
-        withCredentials([usernamePassword(credentialsId: 'Buneary-Jenks', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+        withCredentials([usernamePassword(credentialsId: 'BunJank', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
           sh 'echo "Credential binding succeeded"'
         }
       }
@@ -22,7 +22,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'Buneary-Jenks' 
+                    credentialsId: 'BunJank' 
                 ]]) {
                     sh '''
                     echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
@@ -47,7 +47,7 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'Buneary-Jenks'
+                    credentialsId: 'BunJank'
                 ]]) {
                     sh '''
                     export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
@@ -62,7 +62,7 @@ pipeline {
                 input message: "Approve Terraform Apply?", ok: "Deploy"
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'Buneary-Jenks'
+                    credentialsId: 'BunJank'
                 ]]) {
                     sh '''
                     export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
