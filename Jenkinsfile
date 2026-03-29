@@ -1,4 +1,18 @@
 pipeline {
+  agent any
+  stages {
+    stage('Test credentials') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'Buneary-Jenks', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+          sh 'echo "Credential binding succeeded"'
+        }
+      }
+    }
+  }
+}
+
+
+pipeline {
     agent any
     environment {
         AWS_REGION = 'us-east-1' 
